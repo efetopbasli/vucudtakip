@@ -1,9 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const defaultDietPlan = {
+  Kahvaltı: ["Yumurta", "Avokado", "Tam tahıllı ekmek"],
+  Öğle: ["Izgara tavuk", "Kinoa", "Yeşil salata"],
+  "Ara Öğun": ["Meyve", "Badem"],
+  Akşam: ["Izgara somon", "Brokoli", "Kahverengi pirinç"],
+  Gece: ["Lor peyniri"]
+};
 
 const days = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 
@@ -36,6 +44,22 @@ const targetMetrics = {
 export default function DailyTracker() {
   const [completed, setCompleted] = useState({});
   const [progress, setProgress] = useState({});
+  const [dietPlan, setDietPlan] = useState(defaultDietPlan);
+
+  useEffect(() => {
+    const loadProgress = async () => {
+      const date = new Date().toISOString().split("T")[0];
+      const res = await fetch(`/api/progress?userId=demoUser&date=${date}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.result) {
+          setCompleted(data.result.completed || {});
+          setProgress(data.result.progress || {});
+        }
+      }
+    };
+    loadProgress();
+  }, []);
 
   const toggle = (day, item) => {
     const updated = {
@@ -59,6 +83,18 @@ export default function DailyTracker() {
     };
     setProgress(updated);
     saveProgressToDB(day, completed[day], updated[day]);
+  };
+
+  const generateDietPlan = () => {
+    // Bu örnek işlev günlük planı rastgele alternatiflerle günceller
+    const meals = Object.keys(defaultDietPlan);
+    const newPlan = {};
+    meals.forEach((meal) => {
+      const options = defaultDietPlan[meal];
+      const item = options[Math.floor(Math.random() * options.length)];
+      newPlan[meal] = [item];
+    });
+    setDietPlan(newPlan);
   };
 
   const getFeedback = (day) => {
@@ -130,6 +166,24 @@ export default function DailyTracker() {
                 <li>Vitaminler: {dailyMacros.vitamins.join(", ")}</li>
                 <li>Mineraller: {dailyMacros.minerals.join(", ")}</li>
               </ul>
+            </div>
+
+            <div className="pt-4">
+              <p className="text-sm font-medium">Günlük Diyet Planı:</p>
+              <ul className="text-sm list-disc list-inside">
+                {Object.entries(dietPlan).map(([meal, foods]) => (
+                  <li key={meal}>
+                    <span className="font-medium">{meal}:</span> {foods.join(", ")}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                onClick={generateDietPlan}
+                variant="outline"
+                className="mt-2"
+              >
+                Planı Güncelle
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4">
